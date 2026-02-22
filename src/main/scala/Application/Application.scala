@@ -1,10 +1,15 @@
 package Application
 
+import upickle.default.*
+
+case class newUser(name: String, password: String) derives ReadWriter
+case class User(id: Int, name: String)
 
 object Application extends cask.MainRoutes:
 
   try {
     db.Database.setVariables()
+    db.Database.setupDatabase()
   } catch  {
     case e: Exception =>
       println(e)
@@ -13,8 +18,25 @@ object Application extends cask.MainRoutes:
 
 
 
+
   @cask.get("/")
   def hello(): String = "Hello"
+
+  @cask.post("/api/new-user")
+  def createNewUser(request: cask.Request): cask.Response[String] =
+    try {
+      val user: newUser = read[newUser](request.text())
+      db.Database.createUser(user.name, user.password)
+      cask.Response("User created", 200)
+    }
+    catch {
+      case e: Exception =>
+        println(e)
+        cask.Response("Error", 500)
+    }
+
+  initialize()
+
 
 
   /*
@@ -43,6 +65,3 @@ object Application extends cask.MainRoutes:
     cask.Response(raw, 200)
 
    */
-
-
-  initialize()
