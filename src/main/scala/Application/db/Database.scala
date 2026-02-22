@@ -2,7 +2,11 @@ package Application.db
 
 
 import slick.jdbc.PostgresProfile.api.*
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import Application.db
+
+import scala.concurrent.Future
 
 object Database:
   private var hostname: String = ""
@@ -46,3 +50,26 @@ object Database:
     val databaseConnection: Database = connectDatabase()
     databaseConnection.run(insertUser)
     databaseConnection.close()
+
+  def createPost(text: String, userId: Int): Unit =
+    val insertPost = DBIO.seq(
+      posts += (0,text,userId)
+    )
+    val databaseConnection: Database = connectDatabase()
+    databaseConnection.run(insertPost)
+    databaseConnection.close()
+
+  def getUsers: Future[List[Application.User]] =
+    val databaseConnection: Database = connectDatabase()
+    val future: Future[List[Application.User]] = databaseConnection.run(users.result).map(rows => rows.map {
+      case (id, name, password) => Application.User(id, name)
+    }.toList)
+    // After future completes close database connection
+    future.andThen { case _ => databaseConnection.close() }
+
+  def getPosts: Future[List[Application.Post]] =
+    val databaseConnection: Database = connectDatabase()
+    val future: Future[List[Application.Post]] = databaseConnection.run(posts.result).map(rows => rows.map {
+      case (id, text, userId) => Application.Post(id, text, userId)
+    }.toList)
+    future.andThen { case _ => databaseConnection.close() }

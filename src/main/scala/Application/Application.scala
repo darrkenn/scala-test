@@ -2,8 +2,13 @@ package Application
 
 import upickle.default.*
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 case class newUser(name: String, password: String) derives ReadWriter
-case class User(id: Int, name: String)
+case class newPost(text: String, userId: Int) derives ReadWriter
+case class User(id: Int, name: String) derives ReadWriter
+case class Post(id: Int, text: String, userId: Int) derives ReadWriter
 
 object Application extends cask.MainRoutes:
 
@@ -34,6 +39,31 @@ object Application extends cask.MainRoutes:
         println(e)
         cask.Response("Error", 500)
     }
+
+  @cask.post("/api/new-post")
+  def createNewPost(request: cask.Request): cask.Response[String] =
+    try {
+      val post: newPost = read[newPost](request.text())
+      db.Database.createPost(post.text, post.userId)
+      cask.Response("Post created", 200)
+    }
+    catch {
+      case e: Exception =>
+        println(e)
+        cask.Response("Error", 500)
+    }
+
+  @cask.get("/api/get-users")
+  def getUsers(): cask.Response[String] =
+    val users = Await.result(db.Database.getUsers, Duration.Inf)
+    cask.Response(upickle.default.write(users), 200)
+
+
+  @cask.get("/api/get-posts")
+  def getPosts(): cask.Response[String] =
+    val posts = Await.result(db.Database.getPosts, Duration.Inf)
+    cask.Response(upickle.default.write(posts), 200)
+
 
   initialize()
 
